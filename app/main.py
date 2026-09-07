@@ -37,7 +37,7 @@ TMP_DIR = DATA_DIR / "_upload"
 TMP_DIR.mkdir(exist_ok=True)
 
 # ── 앱 버전 & 자동 업데이트 ──
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 UPDATE_MANIFEST_URL = "https://github.com/peach44400-oss/COUPANG-DASHBOARD/releases/latest/download/version.json"
 
 

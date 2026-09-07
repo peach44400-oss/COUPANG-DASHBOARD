@@ -101,12 +101,27 @@
 
       <!-- ---------- 판매 분석 화면 (쿠팡 프리미엄데이터 콘솔풍) ---------- -->
       <section class="screen" id="scr-sales">
-        <div class="bar consolebar">
-          <div class="fg"><label>SKU / 상품명</label><input type="text" id="saQ" placeholder="상품명 검색"></div>
-          <div class="fg"><label>기간</label><span class="dateui"><input type="date" id="saStart"><span class="dsep">~</span><input type="date" id="saEnd"></span></div>
-          <div class="fg"><label>보기</label><select class="psel" id="saUnit"><option value="sku">상품별</option><option value="item">벤더아이템별</option><option value="date">일자별</option></select></div>
-          <button class="resetbtn" id="saSearch">🔍 검색</button>
-          <button class="btn" id="saReset">↻ 초기화</button>
+        <div class="bar consolebar console2">
+          <div class="frow">
+            <div class="fg"><label>카테고리</label>
+              <div class="cascade">
+                <select class="psel casc" disabled><option>상품 카테고리</option></select><span class="cchev">›</span>
+                <select class="psel casc" disabled><option>하위 카테고리</option></select><span class="cchev">›</span>
+                <select class="psel casc" id="saCat"><option value="">세부 카테고리 (전체)</option></select>
+              </div>
+            </div>
+            <div class="fg"><label>브랜드</label><select class="psel" id="saBrand" disabled><option>전체</option></select></div>
+            <div class="fg grow"><label>SKU ID / SKU명</label><input type="text" id="saQ" placeholder="입력해주세요."></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>날짜</label><span class="dateui"><input type="date" id="saStart"><span class="dsep">~</span><input type="date" id="saEnd"></span></div>
+            <div class="fg"><label class="hint">월별 보기</label><select class="psel" id="saMonth"><option value="">월별 보기</option></select></div>
+            <div class="fg"><label class="hint">분기별 보기</label><select class="psel" id="saQuarter"><option value="">분기별 보기</option></select></div>
+            <div class="fg"><label>보기</label><select class="psel" id="saUnit"><option value="sku">상품별</option><option value="item">벤더아이템별</option><option value="date">일자별</option></select></div>
+            <span class="sp" style="flex:1"></span>
+            <button class="btn" id="saReset">↻ 초기화</button>
+            <button class="resetbtn" id="saSearch">검색</button>
+          </div>
         </div>
         <div id="saCards" class="cards"></div>
         <div class="panel"><h2 style="margin-top:0">🛒 판매 분석 <span class="sub" id="saInfo">기본 지표(매출·수량·원가) · 유입 지표(조회·전환·객단가) · 헤더 클릭 정렬</span></h2>
@@ -116,12 +131,27 @@
 
       <!-- ---------- 기본 물류 지표 화면 (쿠팡 프리미엄데이터 콘솔풍) ---------- -->
       <section class="screen" id="scr-logi">
-        <div class="bar consolebar">
-          <div class="fg"><label>SKU / 상품명</label><input type="text" id="loQ" placeholder="상품명 검색"></div>
-          <div class="fg"><label>기간 (입·출고)</label><span class="dateui"><input type="date" id="loStart"><span class="dsep">~</span><input type="date" id="loEnd"></span></div>
-          <div class="fg"><label>보기</label><select class="psel" id="loUnit"><option value="sku">상품별</option><option value="center">센터별</option><option value="both">상품 × 센터</option></select></div>
-          <button class="resetbtn" id="loSearch">🔍 검색</button>
-          <button class="btn" id="loReset">↻ 초기화</button>
+        <div class="bar consolebar console2">
+          <div class="frow">
+            <div class="fg"><label>카테고리</label>
+              <div class="cascade">
+                <select class="psel casc" disabled><option>상품 카테고리</option></select><span class="cchev">›</span>
+                <select class="psel casc" disabled><option>하위 카테고리</option></select><span class="cchev">›</span>
+                <select class="psel casc" id="loCat"><option value="">세부 카테고리 (전체)</option></select>
+              </div>
+            </div>
+            <div class="fg"><label>브랜드</label><select class="psel" id="loBrand" disabled><option>전체</option></select></div>
+            <div class="fg grow"><label>SKU ID / SKU명</label><input type="text" id="loQ" placeholder="입력해주세요."></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>날짜 (입·출고)</label><span class="dateui"><input type="date" id="loStart"><span class="dsep">~</span><input type="date" id="loEnd"></span></div>
+            <div class="fg"><label class="hint">월별 보기</label><select class="psel" id="loMonth"><option value="">월별 보기</option></select></div>
+            <div class="fg"><label class="hint">분기별 보기</label><select class="psel" id="loQuarter"><option value="">분기별 보기</option></select></div>
+            <div class="fg"><label>FC (센터)</label><select class="psel" id="loFC"><option value="">전체</option></select></div>
+            <span class="sp" style="flex:1"></span>
+            <button class="btn" id="loReset">↻ 초기화</button>
+            <button class="resetbtn" id="loSearch">검색</button>
+          </div>
         </div>
         <div id="loCards" class="cards"></div>
         <div class="panel"><h2 style="margin-top:0">🚚 기본 물류 지표 <span class="sub" id="loInfo">기본 지표(입고·출고·현재재고) · 재고 기준일 <span id="loLd"></span> · 회송/납품율은 원본 데이터 없음</span></h2>

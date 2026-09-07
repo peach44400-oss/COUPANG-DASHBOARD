@@ -239,18 +239,28 @@ async function ensureD(){
 function pct2(x){return (x==null||isNaN(x))?'—':x.toFixed(2)+'%';}
 function seedDates(a,b){var D=window.D;if(a&&!a.value){a.value=D.period[0];}if(b&&!b.value){b.value=D.period[1];}}
 
+/* ---------- 공통: 카테고리/월/분기 셀렉트 ---------- */
+function fillCatSel(id){$(id).innerHTML='<option value="">세부 카테고리 (전체)</option>'+window.D.CN.slice().sort().map(function(c){return '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>';}).join('');}
+function distinctMonths(){var s={};window.D.F.forEach(function(r){s[r[0].slice(0,7)]=1;});return Object.keys(s).sort().reverse();}
+function distinctQuarters(){var s={};window.D.F.forEach(function(r){var d=r[0];s[d.slice(0,4)+'-Q'+(Math.floor((+d.slice(5,7)-1)/3)+1)]=1;});return Object.keys(s).sort().reverse();}
+function fillMonthSel(id){$(id).innerHTML='<option value="">월별 보기</option>'+distinctMonths().map(function(ym){return '<option value="'+ym+'">'+(+ym.slice(0,4))+'년 '+(+ym.slice(5,7))+'월</option>';}).join('');}
+function fillQSel(id){$(id).innerHTML='<option value="">분기별 보기</option>'+distinctQuarters().map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('');}
+function monthRange(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7),lo=window.D.period[0],hi=window.D.period[1];return [clamp(ym+'-01',lo,hi),clamp(ym+'-'+String(lastDay(y,m)).padStart(2,'0'),lo,hi)];}
+function quarterRange(qk){var y=+qk.slice(0,4),q=+qk.slice(6),sm=(q-1)*3+1,em=sm+2,lo=window.D.period[0],hi=window.D.period[1];return [clamp(y+'-'+String(sm).padStart(2,'0')+'-01',lo,hi),clamp(y+'-'+String(em).padStart(2,'0')+'-'+String(lastDay(y,em)).padStart(2,'0'),lo,hi)];}
+function skuCatMap(){var m={},D=window.D;D.F.forEach(function(r){var n=D.SN[r[2]];if(!(n in m))m[n]=D.CN[r[3]];});return m;}
+
 /* ---------- 판매 분석 ---------- */
 let salesSeeded=false;
 async function showSales(){
   const D=await ensureD();
   if(!D){ $('saInfo').textContent='데이터 없음 — [데이터 관리]에서 업로드하세요'; return; }
-  if(!salesSeeded){ seedDates($('saStart'),$('saEnd')); salesSeeded=true; }
+  if(!salesSeeded){ seedDates($('saStart'),$('saEnd')); fillCatSel('saCat'); fillMonthSel('saMonth'); fillQSel('saQuarter'); salesSeeded=true; }
   renderSales();
 }
 function saAgg(){
-  const D=window.D, q=$('saQ').value.trim().toLowerCase(), s=$('saStart').value, e=$('saEnd').value, unit=$('saUnit').value;
+  const D=window.D, q=$('saQ').value.trim().toLowerCase(), s=$('saStart').value, e=$('saEnd').value, unit=$('saUnit').value, cat=$('saCat').value;
   const m=new Map();
-  D.F.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return;
+  D.F.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return; if(cat&&D.CN[r[3]]!==cat)return;
     var key,name;
     if(unit==='date'){key=d;name=d;}
     else{var idx=unit==='item'?1:2, names=unit==='item'?D.VN:D.SN; key=r[idx]; name=names[r[idx]];}
@@ -283,62 +293,58 @@ function renderSales(){
   $('saCards').innerHTML=cards.map(function(c){return '<div class="card sm"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
   $('saInfo').textContent=rows.length+'개 · '+($('saStart').value||'')+' ~ '+($('saEnd').value||'');
 }
+function saMonthPick(){var v=$('saMonth').value; if(v){var r=monthRange(v);$('saStart').value=r[0];$('saEnd').value=r[1];$('saQuarter').value='';} renderSales();}
+function saQPick(){var v=$('saQuarter').value; if(v){var r=quarterRange(v);$('saStart').value=r[0];$('saEnd').value=r[1];$('saMonth').value='';} renderSales();}
 $('saSearch').onclick=renderSales;
-$('saUnit').onchange=renderSales;
+$('saUnit').onchange=renderSales; $('saCat').onchange=renderSales;
+$('saMonth').onchange=saMonthPick; $('saQuarter').onchange=saQPick;
+$('saStart').onchange=function(){$('saMonth').value='';$('saQuarter').value='';renderSales();};
+$('saEnd').onchange=function(){$('saMonth').value='';$('saQuarter').value='';renderSales();};
 $('saQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderSales();});
-$('saReset').onclick=function(){$('saQ').value='';$('saStart').value=window.D.period[0];$('saEnd').value=window.D.period[1];$('saUnit').value='sku';renderSales();};
+$('saReset').onclick=function(){$('saQ').value='';$('saCat').value='';$('saMonth').value='';$('saQuarter').value='';$('saStart').value=window.D.period[0];$('saEnd').value=window.D.period[1];$('saUnit').value='sku';renderSales();};
 
 /* ---------- 기본 물류 지표 ---------- */
 let logiSeeded=false;
+function fillFC(id){$(id).innerHTML='<option value="">전체</option>'+window.D.mtx.centers.map(function(c){return '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>';}).join('');}
 async function showLogi(){
   const D=await ensureD();
   if(!D){ $('loInfo').textContent='데이터 없음 — [데이터 관리]에서 업로드하세요'; return; }
   if(!D.mtx){ $('loBody').innerHTML='<tr><td style="padding:16px;color:var(--faint)">물류 데이터가 없습니다.</td></tr>'; return; }
-  if(!logiSeeded){ seedDates($('loStart'),$('loEnd')); logiSeeded=true; }
+  if(!logiSeeded){ seedDates($('loStart'),$('loEnd')); fillCatSel('loCat'); fillMonthSel('loMonth'); fillQSel('loQuarter'); fillFC('loFC'); logiSeeded=true; }
   $('loLd').textContent=D.ld||'';
   renderLogi();
 }
 function loAgg(){
-  const D=window.D, q=$('loQ').value.trim().toLowerCase(), s=$('loStart').value, e=$('loEnd').value, unit=$('loUnit').value;
-  const skus=D.mtx.skus, centers=D.mtx.centers, m=new Map();
-  function keyName(si,ci){
-    if(unit==='center') return [ci, centers[ci]];
-    if(unit==='both') return [si+'|'+ci, skus[si]+' @ '+centers[ci]];
-    return [si, skus[si]];
-  }
-  function nameOf(si){return skus[si];}
-  function ensure(k,n){ if(!m.has(k))m.set(k,{name:n,inb:0,outb:0,stk:0}); return m.get(k); }
-  // 입·출고 (기간)
-  D.mtx.lf.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return;
-    if(q&&String(nameOf(r[1])).toLowerCase().indexOf(q)<0)return;
-    var kn=keyName(r[1],r[2]); var a=ensure(kn[0],kn[1]); a.outb+=r[3]; a.inb+=r[4];
-  });
-  // 현재 재고 (기준일)
-  D.mtx.stk.forEach(function(r){
-    if(q&&String(nameOf(r[0])).toLowerCase().indexOf(q)<0)return;
-    var kn=keyName(r[0],r[1]); var a=ensure(kn[0],kn[1]); a.stk+=r[2];
-  });
-  var rows=Array.from(m.values()).filter(function(o){return o.inb||o.outb||o.stk;}).sort(function(a,b){return b.outb-a.outb;});
-  return rows;
+  const D=window.D, q=$('loQ').value.trim().toLowerCase(), s=$('loStart').value, e=$('loEnd').value, cat=$('loCat').value, fc=$('loFC').value;
+  const skus=D.mtx.skus, fcIdx=fc?D.mtx.centers.indexOf(fc):-1, sc=cat?skuCatMap():null, m=new Map();
+  function pass(si){var nm=skus[si]; if(q&&nm.toLowerCase().indexOf(q)<0)return false; if(cat&&sc[nm]!==cat)return false; return true;}
+  function ens(si){ if(!m.has(si))m.set(si,{name:skus[si],inb:0,outb:0,stk:0}); return m.get(si); }
+  D.mtx.lf.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return; if(fcIdx>=0&&r[2]!==fcIdx)return; if(!pass(r[1]))return; var a=ens(r[1]); a.outb+=r[3]; a.inb+=r[4];});
+  D.mtx.stk.forEach(function(r){ if(fcIdx>=0&&r[1]!==fcIdx)return; if(!pass(r[0]))return; var a=ens(r[0]); a.stk+=r[2];});
+  return Array.from(m.values()).filter(function(o){return o.inb||o.outb||o.stk;}).sort(function(a,b){return b.outb-a.outb;});
 }
 function renderLogi(){
-  const rows=loAgg(), unit=$('loUnit').value;
-  const label=unit==='center'?'센터':(unit==='both'?'상품 × 센터':'상품명');
-  $('loHead').innerHTML='<tr><th rowspan="2">'+label+'</th><th class="num" colspan="3">기본 지표</th><th rowspan="2">상태</th></tr>'
+  const rows=loAgg(), fc=$('loFC').value;
+  $('loHead').innerHTML='<tr><th rowspan="2">상품명</th><th class="num" colspan="3">기본 지표</th><th rowspan="2">상태</th></tr>'
     +'<tr><th class="num">입고수량</th><th class="num">출고수량</th><th class="num">현재재고</th></tr>';
   $('loBody').innerHTML=rows.map(function(o){
     var st=o.stk<=0?'<span class="badge crit">품절</span>':'<span class="badge ok">정상</span>';
     return '<tr><td>'+o.name+'</td><td class="num">'+fmtWon(o.inb)+'</td><td class="num">'+fmtWon(o.outb)+'</td><td class="num">'+fmtWon(o.stk)+'</td><td>'+st+'</td></tr>';
   }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--faint)">해당 조건의 데이터 없음</td></tr>';
   var t={inb:0,outb:0,stk:0}; rows.forEach(function(o){t.inb+=o.inb;t.outb+=o.outb;t.stk+=o.stk;});
-  var cards=[['총 입고',fmtWon(t.inb)+'개'],['총 출고',fmtWon(t.outb)+'개'],['현재 재고',fmtWon(t.stk)+'개'],['행 수',rows.length.toLocaleString()]];
+  var cards=[['총 입고',fmtWon(t.inb)+'개'],['총 출고',fmtWon(t.outb)+'개'],['현재 재고',fmtWon(t.stk)+'개'],['FC',fc||'전체']];
   $('loCards').innerHTML=cards.map(function(c){return '<div class="card sm"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
-  $('loInfo').textContent=rows.length+'개 · 입·출고 '+($('loStart').value||'')+' ~ '+($('loEnd').value||'')+' · 재고 기준일 '+(window.D.ld||'');
+  $('loInfo').textContent=rows.length+'개 · '+(fc||'전 센터')+' · 입·출고 '+($('loStart').value||'')+' ~ '+($('loEnd').value||'')+' · 재고 기준일 '+(window.D.ld||'');
 }
+function loMonthPick(){var v=$('loMonth').value; if(v){var r=monthRange(v);$('loStart').value=r[0];$('loEnd').value=r[1];$('loQuarter').value='';} renderLogi();}
+function loQPick(){var v=$('loQuarter').value; if(v){var r=quarterRange(v);$('loStart').value=r[0];$('loEnd').value=r[1];$('loMonth').value='';} renderLogi();}
 $('loSearch').onclick=renderLogi;
-$('loUnit').onchange=renderLogi;
+$('loCat').onchange=renderLogi; $('loFC').onchange=renderLogi;
+$('loMonth').onchange=loMonthPick; $('loQuarter').onchange=loQPick;
+$('loStart').onchange=function(){$('loMonth').value='';$('loQuarter').value='';renderLogi();};
+$('loEnd').onchange=function(){$('loMonth').value='';$('loQuarter').value='';renderLogi();};
 $('loQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderLogi();});
-$('loReset').onclick=function(){$('loQ').value='';$('loStart').value=window.D.period[0];$('loEnd').value=window.D.period[1];$('loUnit').value='sku';renderLogi();};
+$('loReset').onclick=function(){$('loQ').value='';$('loCat').value='';$('loFC').value='';$('loMonth').value='';$('loQuarter').value='';$('loStart').value=window.D.period[0];$('loEnd').value=window.D.period[1];renderLogi();};
 
 /* ---------- 구매 트렌드 (지표 막대 + 구매전환율 선) ---------- */
 let trChartObj=null, trendSeeded=false;
