@@ -204,4 +204,12 @@ canvas{max-width:100%;}
 
 iframe.fc{width:100%;height:calc(100vh - 150px);border:1px solid var(--line);border-radius:var(--r);background:var(--surface);}
 
+/* ---------- 콘솔 리포트 필터바 (판매 분석 / 기본 물류 지표) ---------- */
+.consolebar{align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:12px;font-weight:700;color:var(--ink);}
+.fg input,.fg select{min-width:150px;}
+.mtx th[colspan]{background:var(--th-strong)!important;text-align:center;color:var(--ink);border-bottom:1px solid var(--line);}
+.mtx thead tr:first-child th{border-bottom:1px solid var(--line);}
+
 @media(max-width:900px){.grid{grid-template-columns:1fr;}.side{width:64px;}.brand b,.brand span,.nav button em,.nav .navsep,.side-foot .ver{display:none;}.nav button{justify-content:center;}}

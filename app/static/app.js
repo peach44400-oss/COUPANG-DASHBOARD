@@ -42,6 +42,8 @@ function go(scr){
   $('scrTitle').textContent=TITLES[scr]||'';
   $('dashPeriod').style.display=(scr==='dash')?'':'none';
   if(scr==='dash'&&!dashLoaded) loadDash();
+  if(scr==='sales') showSales();
+  if(scr==='logi') showLogi();
   if(scr==='data') loadState();
   if(scr==='update') updShow();
 }
@@ -222,6 +224,120 @@ $('btnArchive').onclick=async function(){
   if(!confirm('현재 통합본을 보관본으로 저장하고 통합본을 비웁니다. 진행할까요?'))return;
   try{ const r=await api('/api/archive',{method:'POST'}); showMsg('dataMsg','ok','📦 보관 완료: '+(r.archive||'')); loadState(); dashLoaded=false; }catch(e){}
 };
+
+/* ===========================================================
+   판매 분석 · 기본 물류 지표 (쿠팡 프리미엄데이터 콘솔풍 리포트)
+   — window.D 로 렌더 (dashboard.js/analytics.py 불변)
+   =========================================================== */
+async function ensureD(){
+  if(window.D&&window.D.F) return window.D;
+  const D=await api('/api/dashboard');
+  if(!D||D.empty){ return null; }
+  window.D=D; return D;
+}
+function pct2(x){return (x==null||isNaN(x))?'—':x.toFixed(2)+'%';}
+function seedDates(a,b){var D=window.D;if(a&&!a.value){a.value=D.period[0];}if(b&&!b.value){b.value=D.period[1];}}
+
+/* ---------- 판매 분석 ---------- */
+let salesSeeded=false;
+async function showSales(){
+  const D=await ensureD();
+  if(!D){ $('saInfo').textContent='데이터 없음 — [데이터 관리]에서 업로드하세요'; return; }
+  if(!salesSeeded){ seedDates($('saStart'),$('saEnd')); salesSeeded=true; }
+  renderSales();
+}
+function saAgg(){
+  const D=window.D, q=$('saQ').value.trim().toLowerCase(), s=$('saStart').value, e=$('saEnd').value, unit=$('saUnit').value;
+  const m=new Map();
+  D.F.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return;
+    var key,name;
+    if(unit==='date'){key=d;name=d;}
+    else{var idx=unit==='item'?1:2, names=unit==='item'?D.VN:D.SN; key=r[idx]; name=names[r[idx]];}
+    if(q&&String(name).toLowerCase().indexOf(q)<0)return;
+    if(!m.has(key))m.set(key,{name:name,gmv:0,amv:0,units:0,ret:0,cogs:0,pv:0,ord:0});
+    var a=m.get(key); a.gmv+=r[4];a.amv+=r[9];a.units+=r[5];a.ret+=r[6];a.cogs+=r[10];a.pv+=r[8];a.ord+=r[7];
+  });
+  var rows=Array.from(m.values());
+  if(unit==='date') rows.sort(function(a,b){return a.name<b.name?-1:1;});
+  else rows.sort(function(a,b){return b.gmv-a.gmv;});
+  return rows;
+}
+function renderSales(){
+  const rows=saAgg();
+  const label=$('saUnit').value==='date'?'날짜':($('saUnit').value==='item'?'벤더아이템':'상품명');
+  $('saHead').innerHTML='<tr><th rowspan="2">'+label+'</th>'
+    +'<th class="num" colspan="5">기본 지표</th><th class="num" colspan="5">유입 지표</th></tr>'
+    +'<tr><th class="num">매출액(GMV)</th><th class="num">조정매출(AMV)</th><th class="num">판매수량</th><th class="num">반품수량</th><th class="num">매입원가</th>'
+    +'<th class="num">조회수(PV)</th><th class="num">주문건수</th><th class="num">구매전환율</th><th class="num">객단가</th><th class="num">평균판매가(ASP)</th></tr>';
+  $('saBody').innerHTML=rows.map(function(o){
+    var conv=o.pv?o.ord/o.pv*100:null, aov=o.ord?o.gmv/o.ord:0, asp=o.units?o.gmv/o.units:0;
+    return '<tr><td>'+o.name+'</td>'
+      +'<td class="num">'+fmtWon(o.gmv)+'</td><td class="num">'+fmtWon(o.amv)+'</td><td class="num">'+fmtWon(o.units)+'</td><td class="num">'+fmtWon(o.ret)+'</td><td class="num">'+fmtWon(o.cogs)+'</td>'
+      +'<td class="num">'+fmtWon(o.pv)+'</td><td class="num">'+fmtWon(o.ord)+'</td><td class="num">'+pct2(conv)+'</td><td class="num">'+fmtWon(aov)+'</td><td class="num">'+fmtWon(asp)+'</td></tr>';
+  }).join('')||'<tr><td colspan="11" style="text-align:center;color:var(--faint)">해당 조건의 데이터 없음</td></tr>';
+  // 요약 카드
+  var t={gmv:0,amv:0,units:0,ret:0,cogs:0,pv:0,ord:0}; rows.forEach(function(o){t.gmv+=o.gmv;t.amv+=o.amv;t.units+=o.units;t.ret+=o.ret;t.cogs+=o.cogs;t.pv+=o.pv;t.ord+=o.ord;});
+  var conv=t.pv?t.ord/t.pv*100:0;
+  var cards=[['매출액(GMV)',fmtWon(t.gmv)+'원'],['판매수량',fmtWon(t.units)+'개'],['반품수량',fmtWon(t.ret)+'개'],['주문건수',fmtWon(t.ord)+'건'],['구매전환율',conv.toFixed(2)+'%'],['매입원가',fmtWon(t.cogs)+'원']];
+  $('saCards').innerHTML=cards.map(function(c){return '<div class="card sm"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
+  $('saInfo').textContent=rows.length+'개 · '+($('saStart').value||'')+' ~ '+($('saEnd').value||'');
+}
+$('saSearch').onclick=renderSales;
+$('saUnit').onchange=renderSales;
+$('saQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderSales();});
+$('saReset').onclick=function(){$('saQ').value='';$('saStart').value=window.D.period[0];$('saEnd').value=window.D.period[1];$('saUnit').value='sku';renderSales();};
+
+/* ---------- 기본 물류 지표 ---------- */
+let logiSeeded=false;
+async function showLogi(){
+  const D=await ensureD();
+  if(!D){ $('loInfo').textContent='데이터 없음 — [데이터 관리]에서 업로드하세요'; return; }
+  if(!D.mtx){ $('loBody').innerHTML='<tr><td style="padding:16px;color:var(--faint)">물류 데이터가 없습니다.</td></tr>'; return; }
+  if(!logiSeeded){ seedDates($('loStart'),$('loEnd')); logiSeeded=true; }
+  $('loLd').textContent=D.ld||'';
+  renderLogi();
+}
+function loAgg(){
+  const D=window.D, q=$('loQ').value.trim().toLowerCase(), s=$('loStart').value, e=$('loEnd').value, unit=$('loUnit').value;
+  const skus=D.mtx.skus, centers=D.mtx.centers, m=new Map();
+  function keyName(si,ci){
+    if(unit==='center') return [ci, centers[ci]];
+    if(unit==='both') return [si+'|'+ci, skus[si]+' @ '+centers[ci]];
+    return [si, skus[si]];
+  }
+  function nameOf(si){return skus[si];}
+  function ensure(k,n){ if(!m.has(k))m.set(k,{name:n,inb:0,outb:0,stk:0}); return m.get(k); }
+  // 입·출고 (기간)
+  D.mtx.lf.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return;
+    if(q&&String(nameOf(r[1])).toLowerCase().indexOf(q)<0)return;
+    var kn=keyName(r[1],r[2]); var a=ensure(kn[0],kn[1]); a.outb+=r[3]; a.inb+=r[4];
+  });
+  // 현재 재고 (기준일)
+  D.mtx.stk.forEach(function(r){
+    if(q&&String(nameOf(r[0])).toLowerCase().indexOf(q)<0)return;
+    var kn=keyName(r[0],r[1]); var a=ensure(kn[0],kn[1]); a.stk+=r[2];
+  });
+  var rows=Array.from(m.values()).filter(function(o){return o.inb||o.outb||o.stk;}).sort(function(a,b){return b.outb-a.outb;});
+  return rows;
+}
+function renderLogi(){
+  const rows=loAgg(), unit=$('loUnit').value;
+  const label=unit==='center'?'센터':(unit==='both'?'상품 × 센터':'상품명');
+  $('loHead').innerHTML='<tr><th rowspan="2">'+label+'</th><th class="num" colspan="3">기본 지표</th><th rowspan="2">상태</th></tr>'
+    +'<tr><th class="num">입고수량</th><th class="num">출고수량</th><th class="num">현재재고</th></tr>';
+  $('loBody').innerHTML=rows.map(function(o){
+    var st=o.stk<=0?'<span class="badge crit">품절</span>':'<span class="badge ok">정상</span>';
+    return '<tr><td>'+o.name+'</td><td class="num">'+fmtWon(o.inb)+'</td><td class="num">'+fmtWon(o.outb)+'</td><td class="num">'+fmtWon(o.stk)+'</td><td>'+st+'</td></tr>';
+  }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--faint)">해당 조건의 데이터 없음</td></tr>';
+  var t={inb:0,outb:0,stk:0}; rows.forEach(function(o){t.inb+=o.inb;t.outb+=o.outb;t.stk+=o.stk;});
+  var cards=[['총 입고',fmtWon(t.inb)+'개'],['총 출고',fmtWon(t.outb)+'개'],['현재 재고',fmtWon(t.stk)+'개'],['행 수',rows.length.toLocaleString()]];
+  $('loCards').innerHTML=cards.map(function(c){return '<div class="card sm"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
+  $('loInfo').textContent=rows.length+'개 · 입·출고 '+($('loStart').value||'')+' ~ '+($('loEnd').value||'')+' · 재고 기준일 '+(window.D.ld||'');
+}
+$('loSearch').onclick=renderLogi;
+$('loUnit').onchange=renderLogi;
+$('loQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderLogi();});
+$('loReset').onclick=function(){$('loQ').value='';$('loStart').value=window.D.period[0];$('loEnd').value=window.D.period[1];$('loUnit').value='sku';renderLogi();};
 
 /* ===========================================================
    발주 예측

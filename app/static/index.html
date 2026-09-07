@@ -15,6 +15,8 @@
     <nav class="nav" id="nav">
       <div class="navsep">분석</div>
       <button data-scr="dash" class="on"><span class="ic">📊</span><em>통합 대시보드</em></button>
+      <button data-scr="sales"><span class="ic">🛒</span><em>판매 분석</em></button>
+      <button data-scr="logi"><span class="ic">🚚</span><em>기본 물류 지표</em></button>
       <button data-scr="forecast"><span class="ic">📦</span><em>발주 예측</em></button>
       <div class="navsep">데이터</div>
       <button data-scr="data"><span class="ic">📁</span><em>데이터 관리</em></button>
@@ -94,6 +96,36 @@
         <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><div class="modalhead"><span class="t" id="modalTitle"></span><button onclick="closeModal()">✕</button></div><div class="scrollbox"><table class="sortable"><thead id="modalHead"><tr><th>센터</th><th class="num">재고</th><th>상태</th></tr></thead><tbody id="modalBody"></tbody></table></div></div></div>
 
         <div class="foot" id="dashFoot"></div>
+      </section>
+
+      <!-- ---------- 판매 분석 화면 (쿠팡 프리미엄데이터 콘솔풍) ---------- -->
+      <section class="screen" id="scr-sales">
+        <div class="bar consolebar">
+          <div class="fg"><label>SKU / 상품명</label><input type="text" id="saQ" placeholder="상품명 검색"></div>
+          <div class="fg"><label>기간</label><span class="dateui"><input type="date" id="saStart"><span class="dsep">~</span><input type="date" id="saEnd"></span></div>
+          <div class="fg"><label>보기</label><select class="psel" id="saUnit"><option value="sku">상품별</option><option value="item">벤더아이템별</option><option value="date">일자별</option></select></div>
+          <button class="resetbtn" id="saSearch">🔍 검색</button>
+          <button class="btn" id="saReset">↻ 초기화</button>
+        </div>
+        <div id="saCards" class="cards"></div>
+        <div class="panel"><h2 style="margin-top:0">🛒 판매 분석 <span class="sub" id="saInfo">기본 지표(매출·수량·원가) · 유입 지표(조회·전환·객단가) · 헤더 클릭 정렬</span></h2>
+          <div class="scrollbox mtxbox"><table class="mtx sortable"><thead id="saHead"></thead><tbody id="saBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ---------- 기본 물류 지표 화면 (쿠팡 프리미엄데이터 콘솔풍) ---------- -->
+      <section class="screen" id="scr-logi">
+        <div class="bar consolebar">
+          <div class="fg"><label>SKU / 상품명</label><input type="text" id="loQ" placeholder="상품명 검색"></div>
+          <div class="fg"><label>기간 (입·출고)</label><span class="dateui"><input type="date" id="loStart"><span class="dsep">~</span><input type="date" id="loEnd"></span></div>
+          <div class="fg"><label>보기</label><select class="psel" id="loUnit"><option value="sku">상품별</option><option value="center">센터별</option><option value="both">상품 × 센터</option></select></div>
+          <button class="resetbtn" id="loSearch">🔍 검색</button>
+          <button class="btn" id="loReset">↻ 초기화</button>
+        </div>
+        <div id="loCards" class="cards"></div>
+        <div class="panel"><h2 style="margin-top:0">🚚 기본 물류 지표 <span class="sub" id="loInfo">기본 지표(입고·출고·현재재고) · 재고 기준일 <span id="loLd"></span> · 회송/납품율은 원본 데이터 없음</span></h2>
+          <div class="scrollbox mtxbox"><table class="mtx sortable"><thead id="loHead"></thead><tbody id="loBody"></tbody></table></div>
+        </div>
       </section>
 
       <!-- ---------- 발주 예측 화면 ---------- -->
