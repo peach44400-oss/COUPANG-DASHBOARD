@@ -44,6 +44,7 @@ function go(scr){
   if(scr==='dash'&&!dashLoaded) loadDash();
   if(scr==='sales') showSales();
   if(scr==='logi') showLogi();
+  if(scr==='trend') showTrend();
   if(scr==='data') loadState();
   if(scr==='update') updShow();
 }
@@ -338,6 +339,44 @@ $('loSearch').onclick=renderLogi;
 $('loUnit').onchange=renderLogi;
 $('loQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderLogi();});
 $('loReset').onclick=function(){$('loQ').value='';$('loStart').value=window.D.period[0];$('loEnd').value=window.D.period[1];$('loUnit').value='sku';renderLogi();};
+
+/* ---------- 구매 트렌드 (지표 막대 + 구매전환율 선) ---------- */
+let trChartObj=null, trendSeeded=false;
+function monLocal(iso){var p=iso.split('-');var dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));var wd=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-wd);return dt.toISOString().slice(0,10);}
+async function showTrend(){
+  const D=await ensureD();
+  if(!D){ $('trInfo').textContent='데이터 없음 — [데이터 관리]에서 업로드하세요'; return; }
+  if(!trendSeeded){ seedDates($('trStart'),$('trEnd')); trendSeeded=true; }
+  renderTrend2();
+}
+function trAgg(){
+  const D=window.D, mi=+$('trMetric').value, unit=$('trUnit').value, s=$('trStart').value, e=$('trEnd').value, q=$('trQ').value.trim().toLowerCase();
+  const m={};
+  D.F.forEach(function(r){var d=r[0]; if(s&&d<s)return; if(e&&d>e)return; if(q&&String(D.SN[r[2]]).toLowerCase().indexOf(q)<0)return;
+    var k=unit==='month'?d.slice(0,7):(unit==='week'?monLocal(d):d);
+    if(!m[k])m[k]={val:0,ord:0,pv:0}; m[k].val+=r[mi]; m[k].ord+=r[7]; m[k].pv+=r[8];});
+  var keys=Object.keys(m).sort();
+  return {keys:keys, vals:keys.map(function(k){return m[k].val;}), conv:keys.map(function(k){return m[k].pv?m[k].ord/m[k].pv*100:0;})};
+}
+function renderTrend2(){
+  var a=trAgg(), lbl=$('trMetric').selectedOptions[0].textContent;
+  if(trChartObj){trChartObj.destroy();trChartObj=null;}
+  trChartObj=new Chart($('trChart'),{data:{labels:a.keys,datasets:[
+    {type:'bar',label:lbl,data:a.vals,backgroundColor:'rgba(52,106,255,.5)',borderColor:'#346AFF',borderWidth:1,yAxisID:'y',order:2},
+    {type:'line',label:'구매전환율(%)',data:a.conv,borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.15)',tension:.35,pointRadius:2,yAxisID:'y1',order:1}
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true}},
+    scales:{y:{position:'left',ticks:{callback:function(v){return Math.round(v).toLocaleString();}}},
+            y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v.toFixed(1)+'%';}}}}}});
+  var pI=0,cI=0; a.vals.forEach(function(v,i){if(v>a.vals[pI])pI=i;}); a.conv.forEach(function(v,i){if(v>a.conv[cI])cI=i;});
+  var tot=a.vals.reduce(function(x,y){return x+y;},0);
+  $('trCards').innerHTML=[['합계 · '+lbl, Math.round(tot).toLocaleString()],['최고 '+lbl+' 구간', a.keys[pI]||'-'],['최고 전환율 구간', (a.keys[cI]||'-')+' · '+(a.conv[cI]||0).toFixed(1)+'%']]
+    .map(function(c){return '<div class="card sm"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
+  $('trInfo').textContent=a.keys.length+' 구간 · '+($('trStart').value||'')+' ~ '+($('trEnd').value||'');
+}
+$('trSearch').onclick=renderTrend2;
+$('trMetric').onchange=renderTrend2; $('trUnit').onchange=renderTrend2;
+$('trQ').addEventListener('keydown',function(e){if(e.key==='Enter')renderTrend2();});
+$('trReset').onclick=function(){$('trQ').value='';$('trMetric').value='4';$('trUnit').value='day';$('trStart').value=window.D.period[0];$('trEnd').value=window.D.period[1];renderTrend2();};
 
 /* ===========================================================
    발주 예측

@@ -17,6 +17,7 @@
       <button data-scr="dash" class="on"><span class="ic">📊</span><em>통합 대시보드</em></button>
       <button data-scr="sales"><span class="ic">🛒</span><em>판매 분석</em></button>
       <button data-scr="logi"><span class="ic">🚚</span><em>기본 물류 지표</em></button>
+      <button data-scr="trend"><span class="ic">📈</span><em>구매 트렌드</em></button>
       <button data-scr="forecast"><span class="ic">📦</span><em>발주 예측</em></button>
       <div class="navsep">데이터</div>
       <button data-scr="data"><span class="ic">📁</span><em>데이터 관리</em></button>
@@ -125,6 +126,22 @@
         <div id="loCards" class="cards"></div>
         <div class="panel"><h2 style="margin-top:0">🚚 기본 물류 지표 <span class="sub" id="loInfo">기본 지표(입고·출고·현재재고) · 재고 기준일 <span id="loLd"></span> · 회송/납품율은 원본 데이터 없음</span></h2>
           <div class="scrollbox mtxbox"><table class="mtx sortable"><thead id="loHead"></thead><tbody id="loBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ---------- 구매 트렌드 화면 (쿠팡 프리미엄데이터 콘솔풍) ---------- -->
+      <section class="screen" id="scr-trend">
+        <div class="bar consolebar">
+          <div class="fg"><label>지표</label><select class="psel" id="trMetric"><option value="4">매출액(GMV)</option><option value="5">판매수량</option><option value="8">조회수(PV)</option><option value="7">주문건수</option></select></div>
+          <div class="fg"><label>단위</label><select class="psel" id="trUnit"><option value="day">일별</option><option value="week">주별</option><option value="month">월별</option></select></div>
+          <div class="fg"><label>기간</label><span class="dateui"><input type="date" id="trStart"><span class="dsep">~</span><input type="date" id="trEnd"></span></div>
+          <div class="fg"><label>SKU / 상품명</label><input type="text" id="trQ" placeholder="상품명(선택)"></div>
+          <button class="resetbtn" id="trSearch">🔍 검색</button>
+          <button class="btn" id="trReset">↻ 초기화</button>
+        </div>
+        <div id="trCards" class="cards"></div>
+        <div class="panel"><h2 style="margin-top:0">📈 구매 트렌드 <span class="sub" id="trInfo">막대=선택 지표 · 선=구매전환율(우축) · 유입↑ + 전환율↑ 일 때 매출 극대화 · 시간대별은 원본 데이터 필요</span></h2>
+          <canvas id="trChart" height="90"></canvas>
         </div>
       </section>
 
