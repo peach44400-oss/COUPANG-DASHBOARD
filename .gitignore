@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# 사용자 데이터 (통합본·업로드·결과·보관본) — 배포/공유 대상 아님
+data/
+*.exe
+
+# 로컬 설정
+.claude/launch.json
+_자동업데이트.bat
+_업데이트로그.txt

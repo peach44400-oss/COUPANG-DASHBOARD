@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠팡 통합 대시보드</title>
+<script>/* 테마 무플래시 */try{var _t=localStorage.getItem('cw_theme')||'light';var _e=(_t==='dark'||_t==='light')?_t:((matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.dataset.theme=_e;document.documentElement.dataset.themeMode=_t;}catch(e){}</script>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- ===== 사이드바 ===== -->
+  <aside class="side">
+    <div class="brand"><div class="bi">📊</div><div><b>쿠팡 대시보드</b><span>Premium Data Analytics</span></div></div>
+    <nav class="nav" id="nav">
+      <div class="navsep">분석</div>
+      <button data-scr="dash" class="on"><span class="ic">📊</span><em>통합 대시보드</em></button>
+      <button data-scr="forecast"><span class="ic">📦</span><em>발주 예측</em></button>
+      <div class="navsep">데이터</div>
+      <button data-scr="data"><span class="ic">📁</span><em>데이터 관리</em></button>
+      <div class="navsep">시스템</div>
+      <button data-scr="update"><span class="ic">🔄</span><em>업데이트</em></button>
+    </nav>
+    <div class="side-foot">
+      <button class="tbtn" data-theme-set="light">☀️</button>
+      <button class="tbtn" data-theme-set="dark">🌙</button>
+      <span class="ver" id="sideVer">v–</span>
+    </div>
+  </aside>
+
+  <!-- ===== 본문 ===== -->
+  <div class="main">
+    <header class="hdr">
+      <h1 id="scrTitle">통합 대시보드</h1>
+      <span class="period" id="dashPeriod"></span>
+      <span class="sp"></span>
+      <button class="btn ghost" id="hdrRefresh" title="새로고침">↻ 새로고침</button>
+    </header>
+    <div class="content">
+
+      <!-- ---------- 대시보드 화면 ---------- -->
+      <section class="screen on" id="scr-dash">
+        <div class="bar">
+          <strong>📅 기간</strong>
+          <div class="dateui">
+            <div class="datefield"><input type="text" id="dStart" readonly placeholder="시작일"><span class="calico">📅</span><div class="cal" id="calStart"></div></div>
+            <span class="dsep">~</span>
+            <div class="datefield"><input type="text" id="dEnd" readonly placeholder="종료일"><span class="calico">📅</span><div class="cal" id="calEnd"></div></div>
+            <div class="ddwrap"><button class="ddbtn" id="ddMonthBtn">월별 보기 <span class="cv">▾</span></button><div class="ddmenu" id="ddMonth"></div></div>
+            <div class="ddwrap"><button class="ddbtn" id="ddQBtn">분기별 보기 <span class="cv">▾</span></button><div class="ddmenu" id="ddQ"></div></div>
+            <button class="resetbtn" id="btnReset">↻ 초기화</button>
+          </div>
+          <span class="sub" id="rangeInfo"></span>
+          <span class="sp" style="flex:1"></span>
+          <strong>🧾 부가세</strong>
+          <input type="number" id="vatRate" value="10" min="0" max="30" step="1" style="width:56px" oninput="onVat()"> %
+          <div class="toggle" style="margin:0"><button id="vatIncl" onclick="setVat('incl')">적용(포함)</button><button id="vatExcl" class="active" onclick="setVat('excl')">제외</button></div>
+          <strong>🏷️ 판촉비(PMC)</strong>
+          <div class="toggle" style="margin:0"><button id="pmcOn" onclick="setPmc(true)">반영</button><button id="pmcOff" class="active" onclick="setPmc(false)">미반영</button></div>
+        </div>
+
+        <div id="kpis" class="cards"></div>
+
+        <h2>📈 추이</h2>
+        <div class="panel">
+          <div class="trendctl"><div class="toggle" style="margin:0"><button id="g_day" class="active" onclick="setGran('day')">일별</button><button id="g_month" onclick="setGran('month')">월별</button><button id="g_year" onclick="setGran('year')">년별</button></div></div>
+          <canvas id="lineChart" height="90"></canvas>
+        </div>
+
+        <h2>💰 상품별 마진 <span class="sub">GMV·판매수량·AMV·PMC 자동 · PPP = GMV − 매입원가 · PPM = (PPP+PMC)÷GMV · 판촉비(PMC)·부가세 반영은 상단 토글로 on/off · 상품별(SKU) 클릭 시 벤더아이템</span></h2>
+        <div class="panel" style="margin-bottom:16px"><h2 style="margin-top:0">전체</h2><div id="marginKpis" class="cards"></div></div>
+        <div class="panel"><h2 style="margin-top:0">상품별 마진·순위 <span class="sub" id="marginInfo"></span><button class="fullbtn" onclick="openFullMargin()">전체보기 ⧉</button></h2>
+          <div class="toggle"><button id="btnMItem" class="active" onclick="setMargMode('item')">벤더아이템별</button><button id="btnMSku" onclick="setMargMode('sku')">상품별(SKU)</button></div>
+          <div class="scrollbox"><table><thead id="marginHead"><tr><th>#</th><th>상품명</th><th class="num">Revenue(GMV)</th><th class="num">판매수량</th><th class="num">AMV</th><th class="num">PPP</th><th class="num">PMC</th><th class="num">PPM</th></tr></thead><tbody id="marginBody"></tbody></table></div>
+          <div class="pager" id="marginPager"></div></div>
+
+        <h2>💰 실적확인 <span class="sub">누적·특정일 · GMV·PPP·UNISOLD·PMC 자동 · PMC=−쿠팡추가할인가 · PPM(PMC)=(PPP+PMC)÷GMV · GAP=PPM−목표 · 상단 부가세 설정 반영</span></h2>
+        <div class="panel" id="perfWrap"><div class="trendctl">
+          <label>📅 누적기간 <input type="date" id="perfStart" onchange="renderPerf()"> ~ <input type="date" id="perfEnd" onchange="renderPerf()"></label>
+          <button class="resetbtn" onclick="perfReset()">전체</button>
+          <label>🎯 목표 <input type="number" id="perfPlan" value="28" min="0" max="100" step="0.5" style="width:66px" oninput="renderPerf();renderDayMargin()"> %</label>
+          <label>📌 특정일 <input type="date" id="perfDay" onchange="renderPerf()"></label>
+          <span class="sub" id="perfInfo"></span></div>
+          <div class="scrollbox mtxbox"><table class="mtx sortable"><thead id="perfHead"></thead><tbody id="perfBody"></tbody></table></div></div>
+
+        <h2>📅 상품별 일자별 마진(PPM) <span class="sub">셀=그날 마진율((GMV−COGS+PMC)÷GMV) · 판촉비(PMC)·부가세 반영은 상단 토글 · 계약마진 이상 초록/미만 빨강 · 상위 100품목</span><button class="fullbtn" onclick="openFullDayMargin()">전체보기 ⧉</button></h2>
+        <div class="panel"><div class="trendctl" style="margin-bottom:8px"><strong style="font-size:12px">📅 이 표 기간</strong><label><input type="date" id="dmStart" onchange="renderDayMargin()"> ~ <input type="date" id="dmEnd" onchange="renderDayMargin()"></label><button class="resetbtn" onclick="dmReset()">전체</button><span class="sub" id="dmInfo"></span></div>
+          <div class="toggle"><button id="dmDay" class="active" onclick="setDmUnit('day')">일별</button><button id="dmMon" onclick="setDmUnit('month')">월별</button></div>
+          <div class="scrollbox mtxbox"><table class="mtx sortable"><thead id="dmHead"></thead><tbody id="dmBody"></tbody></table></div></div>
+
+        <!-- 물류/재고 + 매트릭스: /api/dashboard 의 logiHtml 주입 -->
+        <div id="logiMount"></div>
+
+        <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><div class="modalhead"><span class="t" id="modalTitle"></span><button onclick="closeModal()">✕</button></div><div class="scrollbox"><table class="sortable"><thead id="modalHead"><tr><th>센터</th><th class="num">재고</th><th>상태</th></tr></thead><tbody id="modalBody"></tbody></table></div></div></div>
+
+        <div class="foot" id="dashFoot"></div>
+      </section>
+
+      <!-- ---------- 발주 예측 화면 ---------- -->
+      <section class="screen" id="scr-forecast">
+        <div class="panel">
+          <h2 style="margin-top:0">📦 푸르밀 발주 예측 <span class="sub">「거래처별·품목별 주문현황」 엑셀 업로드 → 영업일평균·요일별평균·최근가중 3법 예측</span></h2>
+          <div class="drop" id="fcDrop"><div class="big">📥</div>주문현황 엑셀(.xlsx)을 끌어다 놓거나 클릭해 선택<input type="file" id="fcFile" accept=".xlsx,.xls,.csv" multiple hidden></div>
+          <div class="filelist" id="fcList"></div>
+          <div class="actions"><button class="btn primary" id="fcRun">📈 예측 분석</button></div>
+          <div class="msg" id="fcMsg"></div>
+        </div>
+        <div id="fcResult" style="margin-top:16px"></div>
+      </section>
+
+      <!-- ---------- 데이터 관리 화면 ---------- -->
+      <section class="screen" id="scr-data">
+        <div class="panel">
+          <h2 style="margin-top:0">📁 데이터 업로드 <span class="sub">쿠팡 판매(일간 종합 성과)·물류(basic_operation) CSV/XLSX — 자동 판별 후 통합본에 누적</span></h2>
+          <div class="drop" id="upDrop"><div class="big">📥</div>파일을 끌어다 놓거나 클릭해 선택 (판매·물류 여러 개 가능)<input type="file" id="upFile" accept=".csv,.xlsx,.xls,.xlsm" multiple hidden></div>
+          <div class="filelist" id="upList"></div>
+          <div class="actions">
+            <button class="btn" id="upPreview">🔍 미리보기(검증만)</button>
+            <button class="btn primary" id="upApply">💾 통합에 적용</button>
+          </div>
+          <div class="msg" id="upMsg"></div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <h2 style="margin-top:0">📊 통합본 현황</h2>
+          <div class="statgrid" id="statGrid"></div>
+          <div class="actions">
+            <button class="btn" id="btnExportXlsx">⬇ 대시보드 엑셀 내보내기</button>
+            <button class="btn" id="btnArchive">📦 마감 보관 (통합본 비우기)</button>
+          </div>
+          <div class="msg" id="dataMsg"></div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <h2 style="margin-top:0">📂 마감 보관본</h2>
+          <div class="scrollbox" style="max-height:260px"><table class="sortable"><thead><tr><th>파일</th><th class="num">크기</th><th></th></tr></thead><tbody id="archBody"><tr><td colspan="3" style="text-align:center;color:var(--faint)">불러오는 중…</td></tr></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ---------- 업데이트 화면 ---------- -->
+      <section class="screen" id="scr-update">
+        <div class="panel">
+          <h2 style="margin-top:0">🔄 자동 업데이트</h2>
+          <div class="statgrid" id="updInfo"></div>
+          <div class="actions">
+            <button class="btn" id="updCheck">업데이트 확인</button>
+            <button class="btn primary" id="updApply" style="display:none">최신 버전 설치</button>
+          </div>
+          <div class="msg" id="updMsg"></div>
+          <p class="sub" style="margin-top:14px">※ 자동 업데이트는 배포된 exe에서만 동작합니다. 새 버전 배포는 <code>게시.bat</code> 참고.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/static/vendor/chart.umd.js"></script>
+<script src="/static/dashboard.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
